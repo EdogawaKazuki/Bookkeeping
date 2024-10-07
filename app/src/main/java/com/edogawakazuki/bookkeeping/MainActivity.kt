@@ -1,5 +1,6 @@
 package com.edogawakazuki.bookkeeping
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -40,7 +41,7 @@ class MainActivity : ComponentActivity() {
                             TopAppBar(
                                 title = { Text("Bookkeeping") },
                                 actions = {
-                                    Button(onClick = { /* Handle refresh! */ }) {
+                                    Button(onClick = { /* enter activ */ }) {
                                         Text("Try me")
                                     }
                                 }
@@ -51,9 +52,6 @@ class MainActivity : ComponentActivity() {
                     },
                     floatingActionButton = {
                         Column {
-                            FloatingActionButton (onClick = { CreateTransication() } ) {
-                                Text("+")
-                            }
                             FloatingActionButton (onClick = { CreateTransication() } ) {
                                 Text("+")
                             }
@@ -78,6 +76,8 @@ class MainActivity : ComponentActivity() {
 
     private fun CreateTransication() {
         Toast.makeText(this, "Create Transaction", Toast.LENGTH_SHORT).show()
+        val intent = Intent(this, EditTransactionActivity::class.java)
+        startActivity(intent)
     }
 
     @Composable
