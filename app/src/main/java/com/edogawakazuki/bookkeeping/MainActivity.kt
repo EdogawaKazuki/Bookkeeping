@@ -43,7 +43,6 @@ import com.edogawakazuki.bookkeeping.data.viewmodel.TransactionViewModelFactory
 import com.edogawakazuki.bookkeeping.ui.theme.BookkeepingTheme
 
 private lateinit var transactionViewModel: TransactionViewModel
-//private lateinit var transactions: List<TransactionEntity>
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -98,10 +97,10 @@ class MainActivity : ComponentActivity() {
 
         val transactionRepository = TransactionRepository(AppDatabaseProvider(this).db.transactionDao())
         val transactionFactory = TransactionViewModelFactory(transactionRepository)
-        transactionViewModel = ViewModelProvider(this, transactionFactory).get(TransactionViewModel::class.java)
+        transactionViewModel = ViewModelProvider(this, transactionFactory)[TransactionViewModel::class.java]
 
     }
-    val editTransactionLauncher = registerForActivityResult(
+    private val editTransactionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ){
         result ->
@@ -188,6 +187,7 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun TransactionPage() {
+        // TODO: Not load all data, just load the first 10 transactions. load more when scrolling
         transactionViewModel.loadTransactions()
         val transactions by transactionViewModel.transactions.observeAsState(initial = emptyList())
 

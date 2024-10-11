@@ -20,14 +20,13 @@ class TransactionViewModel(private val transactionRepository: TransactionReposit
         viewModelScope.launch {
             _transactions.value = transactionRepository.getAllTransactions()
         }
-//        _transactions.value = transactionRepository.getAllTransactions()
     }
+    // Todo load transactions by filters
 
     fun insertTransaction(transaction: TransactionEntity) {
         viewModelScope.launch {
             transactionRepository.insertTransaction(transaction)
             loadTransactions()
         }
-//        transactionRepository.insertTransaction(transaction)
     }
 }
