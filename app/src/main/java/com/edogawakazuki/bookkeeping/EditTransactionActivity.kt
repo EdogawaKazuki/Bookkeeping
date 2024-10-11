@@ -25,6 +25,8 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -62,9 +64,9 @@ class EditTransactionActivity : ComponentActivity() {
                         )
                     }
                 ) { innerPadding ->
-                    val amount = remember { mutableStateOf("") }
+                    val amount = remember { mutableDoubleStateOf(0.0) }
                     val description = remember { mutableStateOf("") }
-                    val date = remember { mutableStateOf("") }
+                    val date = remember { mutableLongStateOf(0) }
                     val category = remember { mutableStateOf("") }
                     // auto focus switch
                     val focusManager = LocalFocusManager.current
@@ -77,8 +79,8 @@ class EditTransactionActivity : ComponentActivity() {
                             focusRequester1.requestFocus()
                         }
                         TextField(
-                            value = amount.value,
-                            onValueChange = { amount.value = it },
+                            value = amount.doubleValue.toString(),
+                            onValueChange = { amount.doubleValue = it.toDouble() },
                             label = { Text("Amount") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -117,8 +119,8 @@ class EditTransactionActivity : ComponentActivity() {
                         )
                         HorizontalDivider()
                         TextField(
-                            value = date.value,
-                            onValueChange = { date.value = it },
+                            value = date.longValue.toString(),
+                            onValueChange = { date.longValue = it.toLong() },
                             label = { Text("Date") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -170,7 +172,7 @@ class EditTransactionActivity : ComponentActivity() {
         }
     }
 
-    private fun submitTransaction(amount: String, description: String, date: String, category: String) {
+    private fun submitTransaction(amount: Double, description: String, date: Long, category: String) {
         val resultIntent = Intent().apply {
             putExtra("amount", amount)
             putExtra("description", description)
