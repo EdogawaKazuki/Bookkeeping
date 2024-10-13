@@ -42,16 +42,31 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import com.edogawakazuki.bookkeeping.data.repository.AppDatabaseProvider
+import com.edogawakazuki.bookkeeping.data.repository.TransactionRepository
 import com.edogawakazuki.bookkeeping.ui.theme.BookkeepingTheme
+import kotlinx.coroutines.launch
 
 
 //Todo: Baidu IME not support the action.next
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
 class EditTransactionActivity : ComponentActivity() {
+    private val transactionRepository: TransactionRepository by lazy {
+        TransactionRepository(AppDatabaseProvider(this@EditTransactionActivity).db.transactionDao())
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val id = intent.getLongExtra("id", -1)
+        val amount = intent.getDoubleExtra("amount", 0.0)
+        val description = intent.getStringExtra("description") ?: ""
+        val date = intent.getLongExtra("date", 0)
+        val account = intent.getStringExtra("account") ?: ""
+        val category = intent.getStringExtra("category") ?: ""
+
         setContent {
             BookkeepingTheme {
                 Scaffold(
@@ -60,14 +75,28 @@ class EditTransactionActivity : ComponentActivity() {
                         TopAppBar(
                             title = { Text("Bookkeeping") },
                             actions = {
+                                Button(onClick = {
+                                    val resultIntent = Intent().apply {
+                                        putExtra("action", "delete")
+                                    }
+                                    lifecycleScope.launch {
+                                        transactionRepository.deleteTransactionById(id)
+                                    }
+                                    setResult(Activity.RESULT_OK, resultIntent)
+                                    finish()
+                                }) {
+                                    Text("Delete")
+                                }
                             }
                         )
                     }
                 ) { innerPadding ->
-                    val amount = remember { mutableDoubleStateOf(0.0) }
-                    val description = remember { mutableStateOf("") }
-                    val date = remember { mutableLongStateOf(0) }
-                    val category = remember { mutableStateOf("") }
+                    val id = remember { mutableLongStateOf(id) }
+                    val amount = remember { mutableDoubleStateOf(amount) }
+                    val description = remember { mutableStateOf(description) }
+                    val date = remember { mutableLongStateOf(date) }
+                    val account = remember { mutableStateOf(account) }
+                    val category = remember { mutableStateOf(category) }
                     // auto focus switch
                     val focusManager = LocalFocusManager.current
                     val (focusRequester1, focusRequester2, focusRequester3, focusRequester4) = FocusRequester.createRefs()
@@ -152,14 +181,14 @@ class EditTransactionActivity : ComponentActivity() {
                             keyboardActions = KeyboardActions(
                                 onDone = { focusManager.clearFocus()
                                     Log.d("EditTransactionActivity", "onDone")
-                                    submitTransaction(amount.value, description.value, date.value, category.value)
+                                    submitTransaction(id.value, amount.value, description.value, date.value, category.value)
                                 }
                             )
                         )
                         HorizontalDivider()
                         Button(
                             onClick = {
-                                submitTransaction(amount.value, description.value, date.value, category.value)
+                                submitTransaction(id.value, amount.value, description.value, date.value, category.value)
                             },
                             modifier = Modifier.align(Alignment.End)
                         ) {
@@ -170,10 +199,33 @@ class EditTransactionActivity : ComponentActivity() {
                 }
             }
         }
+
     }
 
-    private fun submitTransaction(amount: Double, description: String, date: Long, category: String) {
+    private fun submitTransaction(id: Long, amount: Double, description: String, date: Long, category: String) {
+
+        val transactionEntity = com.edogawakazuki.bookkeeping.data.database.entities.TransactionEntity(
+            amount = amount,
+            description = description,
+            date = date,
+            accountId = 0,
+            tag = category
+        )
+        var action = ""
+        if(id== (-1).toLong()){
+            lifecycleScope.launch {
+                transactionRepository.insertTransaction(transactionEntity)
+            }
+            action = "insert"
+        }else{
+            transactionEntity.id = id
+            lifecycleScope.launch {
+                transactionRepository.updateTransaction(transactionEntity)
+            }
+            action = "update"
+        }
         val resultIntent = Intent().apply {
+            putExtra("action", action)
             putExtra("amount", amount)
             putExtra("description", description)
             putExtra("date", date)

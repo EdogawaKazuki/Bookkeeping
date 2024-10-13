@@ -38,11 +38,11 @@ import androidx.lifecycle.viewmodel.ViewModelInitializer
 import com.edogawakazuki.bookkeeping.data.database.entities.TransactionEntity
 import com.edogawakazuki.bookkeeping.data.repository.AppDatabaseProvider
 import com.edogawakazuki.bookkeeping.data.repository.TransactionRepository
-import com.edogawakazuki.bookkeeping.data.viewmodel.TransactionViewModel
-import com.edogawakazuki.bookkeeping.data.viewmodel.TransactionViewModelFactory
+import com.edogawakazuki.bookkeeping.data.viewmodel.TransactionFetchViewModel
+import com.edogawakazuki.bookkeeping.data.viewmodelFactory.TransactionFetchViewModelFactory
 import com.edogawakazuki.bookkeeping.ui.theme.BookkeepingTheme
 
-private lateinit var transactionViewModel: TransactionViewModel
+private lateinit var transactionFetchViewModel: TransactionFetchViewModel
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -95,32 +95,46 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+
         val transactionRepository = TransactionRepository(AppDatabaseProvider(this).db.transactionDao())
-        val transactionFactory = TransactionViewModelFactory(transactionRepository)
-        transactionViewModel = ViewModelProvider(this, transactionFactory)[TransactionViewModel::class.java]
+        val transactionFactory = TransactionFetchViewModelFactory(transactionRepository)
+        transactionFetchViewModel = ViewModelProvider(this, transactionFactory)[TransactionFetchViewModel::class.java]
 
     }
+
     private val editTransactionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ){
         result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val data: Intent? = result.data
+            val action: String? = data?.getStringExtra("action")
             val amount = data?.getDoubleExtra("amount", 0.0)
             val description = data?.getStringExtra("description")
             val date = data?.getLongExtra("date", 0)
             val accountId = data?.getLongExtra("account", 0)
             val tag = data?.getStringExtra("category")
-            Toast.makeText(this, "Amount: $amount, Description: $description, Date: $date, Category: $tag", Toast.LENGTH_SHORT).show()
-            transactionViewModel.insertTransaction(TransactionEntity(amount = amount!!, description = description!!, date = date!!, accountId = accountId!!, tag = tag!!))
+            var toastMsg = "Amount: $amount, Description: $description, Date: $date, Category: $tag"
+            if(action == "insert"){
+                toastMsg = "Insert: $toastMsg"
+            }else if(action == "update"){
+                toastMsg = "Update: $toastMsg"
+            }else if(action == "delete"){
+                toastMsg = "Transaction deleted"
+            }else{
+                toastMsg = "Unknown action $action"
+            }
+            Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show()
+            transactionFetchViewModel.loadTransactions()
         }
+
     }
 
 
     @Composable
     fun TabBar() {
         // State to keep track of the selected tab index
-        var selectedTabIndex by remember { mutableIntStateOf(0) }
+        var selectedTabIndex by remember { mutableIntStateOf(1) }
 
         // Define the tabs
         val tabs = listOf("Home", "Transactions", "Budgets")
@@ -173,23 +187,37 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun TransactionItem(transaction: TransactionEntity) {
         Column {
-            Row {
-                Text(text = "Amount: ${transaction.amount}", modifier = Modifier.padding(end = 16.dp))
-                Text(text = "Date: ${transaction.date}", modifier = Modifier.padding(end = 16.dp))
+            Button(
+                onClick = {
+                    val intent = Intent(this@MainActivity, EditTransactionActivity::class.java).apply {
+                        putExtra("id", transaction.id)
+                        putExtra("amount", transaction.amount)
+                        putExtra("description", transaction.description)
+                        putExtra("date", transaction.date)
+                        putExtra("account", transaction.accountId)
+                        putExtra("category", transaction.tag)
+                    }
+                    editTransactionLauncher.launch(intent)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row {
+                    Text(text = "Amount: ${transaction.amount}", modifier = Modifier.padding(end = 16.dp))
+                    Text(text = "Date: ${transaction.date}", modifier = Modifier.padding(end = 16.dp))
+                }
+                Row{
+                    Text(text = "Description: ${transaction.description}", modifier = Modifier.padding(end = 16.dp))
+                    Text(text = "Account: ${transaction.accountId}", modifier = Modifier.padding(end = 16.dp))
+                }
+                HorizontalDivider()
             }
-            Row{
-                Text(text = "Description: ${transaction.description}", modifier = Modifier.padding(end = 16.dp))
-                Text(text = "Account: ${transaction.accountId}", modifier = Modifier.padding(end = 16.dp))
-            }
-            HorizontalDivider()
         }
     }
 
     @Composable
     fun TransactionPage() {
         // TODO: Not load all data, just load the first 10 transactions. load more when scrolling
-        transactionViewModel.loadTransactions()
-        val transactions by transactionViewModel.transactions.observeAsState(initial = emptyList())
+        val transactions by transactionFetchViewModel.transactions.observeAsState(initial = emptyList())
 
         LazyColumn(
             modifier = Modifier
