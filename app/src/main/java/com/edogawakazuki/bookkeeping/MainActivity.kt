@@ -24,11 +24,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.modifier.modifierLocalMapOf
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,10 +50,9 @@ private lateinit var transactionFetchViewModel: TransactionFetchViewModel
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
 
-
+    private val openAlertDialog = mutableStateOf(false)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         enableEdgeToEdge()
         setContent {
             BookkeepingTheme {
@@ -60,7 +62,9 @@ class MainActivity : ComponentActivity() {
                             TopAppBar(
                                 title = { Text("Bookkeeping") },
                                 actions = {
-                                    Button(onClick = { /* enter activ */ }) {
+                                    Button(onClick = {
+                                        openAlertDialog.value = true
+                                    }) {
                                         Text("Try me")
                                     }
                                 }
@@ -177,6 +181,7 @@ class MainActivity : ComponentActivity() {
                     2 -> SettingsContent()
                 }
             }
+
         }
     }
 
@@ -228,8 +233,73 @@ class MainActivity : ComponentActivity() {
                 TransactionItem(transaction)
             }
         }
+        DialogExamples(openAlertDialog)
+
     }
 
+    @Composable
+    fun DialogExamples(openAlertDialog: MutableState<Boolean>) {
+        // ...
+
+        // ...
+        when {
+            // ...
+            openAlertDialog.value -> {
+                AlertDialogExample(
+                    onDismissRequest = { openAlertDialog.value = false },
+                    onConfirmation = {
+                        openAlertDialog.value = false
+                        println("Confirmation registered") // Add logic here to handle confirmation.
+                    },
+                    dialogTitle = "Alert dialog example",
+                    dialogText = "This is an example of an alert dialog with buttons.",
+                    icon = Icons.Default.Info
+                )
+            }
+        }
+    }
+
+@Composable
+fun AlertDialogExample(
+    onDismissRequest: () -> Unit,
+    onConfirmation: () -> Unit,
+    dialogTitle: String,
+    dialogText: String,
+    icon: ImageVector,
+) {
+    AlertDialog(
+        icon = {
+            Icon(icon, contentDescription = "Example Icon")
+        },
+        title = {
+            Text(text = dialogTitle)
+        },
+        text = {
+            Text(text = dialogText)
+        },
+        onDismissRequest = {
+            onDismissRequest()
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirmation()
+                }
+            ) {
+                Text("Confirm")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onDismissRequest()
+                }
+            ) {
+                Text("Dismiss")
+            }
+        }
+    )
+}
     @Composable
     fun SettingsContent() {
         Box(

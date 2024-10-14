@@ -29,6 +29,7 @@ import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -40,6 +41,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
@@ -61,11 +63,11 @@ class EditTransactionActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val id = intent.getLongExtra("id", -1)
-        val amount = intent.getDoubleExtra("amount", 0.0)
-        val description = intent.getStringExtra("description") ?: ""
-        val date = intent.getLongExtra("date", 0)
-        val account = intent.getStringExtra("account") ?: ""
-        val category = intent.getStringExtra("category") ?: ""
+        var amount = intent.getDoubleExtra("amount", 0.0)
+        var description = intent.getStringExtra("description") ?: ""
+        var date = intent.getLongExtra("date", 0)
+        var account = intent.getStringExtra("account") ?: ""
+        var category = intent.getStringExtra("category") ?: ""
 
         setContent {
             BookkeepingTheme {
@@ -91,12 +93,11 @@ class EditTransactionActivity : ComponentActivity() {
                         )
                     }
                 ) { innerPadding ->
-                    val id = remember { mutableLongStateOf(id) }
-                    val amount = remember { mutableDoubleStateOf(amount) }
-                    val description = remember { mutableStateOf(description) }
-                    val date = remember { mutableLongStateOf(date) }
-                    val account = remember { mutableStateOf(account) }
-                    val category = remember { mutableStateOf(category) }
+                    var amountTextField = remember { mutableStateOf(TextFieldValue(amount.toString())) }
+                    val descriptionTextField = remember { mutableStateOf(TextFieldValue(description)) }
+                    val dateTextField = remember { mutableStateOf(TextFieldValue(date.toString())) }
+                    val accountTextField = remember { mutableStateOf(TextFieldValue(account)) }
+                    val categoryTextField = remember { mutableStateOf(TextFieldValue(category)) }
                     // auto focus switch
                     val focusManager = LocalFocusManager.current
                     val (focusRequester1, focusRequester2, focusRequester3, focusRequester4) = FocusRequester.createRefs()
@@ -108,14 +109,23 @@ class EditTransactionActivity : ComponentActivity() {
                             focusRequester1.requestFocus()
                         }
                         TextField(
-                            value = amount.doubleValue.toString(),
-                            onValueChange = { amount.doubleValue = it.toDouble() },
+                            value = amountTextField.value,
+                            onValueChange = {
+                                text -> amountTextField.value = text
+                                amount = text.text.toDouble()
+                                            },
                             label = { Text("Amount") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .focusRequester(focusRequester1)
                                 .onFocusChanged { focusState ->
                                     Log.d("Focus", "Amount TextField focused: ${focusState.isFocused}")
+                                    if(focusState.isFocused){
+                                        val text = amountTextField.value.text
+                                        amountTextField.value = amountTextField.value.copy(
+                                            selection = TextRange(0, text.length)
+                                        )
+                                    }
                                 },
                             keyboardOptions = KeyboardOptions(
                                 imeAction = ImeAction.Next,
@@ -130,8 +140,11 @@ class EditTransactionActivity : ComponentActivity() {
                         )
                         HorizontalDivider()
                         TextField(
-                            value = description.value,
-                            onValueChange = { description.value = it },
+                            value = descriptionTextField.value,
+                            onValueChange = {
+                                descriptionTextField.value = it
+                                description = it.text
+                                            },
                             label = { Text("Description") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -148,8 +161,11 @@ class EditTransactionActivity : ComponentActivity() {
                         )
                         HorizontalDivider()
                         TextField(
-                            value = date.longValue.toString(),
-                            onValueChange = { date.longValue = it.toLong() },
+                            value = dateTextField.value,
+                            onValueChange = {
+                                dateTextField.value = it
+                                date = it.text.toLong()
+                                            },
                             label = { Text("Date") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -166,8 +182,11 @@ class EditTransactionActivity : ComponentActivity() {
                         )
                         HorizontalDivider()
                         TextField(
-                            value = category.value,
-                            onValueChange = { category.value = it },
+                            value = categoryTextField.value,
+                            onValueChange = {
+                                categoryTextField.value = it
+                                category = it.text
+                                            },
                             label = { Text("Category") },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -181,14 +200,14 @@ class EditTransactionActivity : ComponentActivity() {
                             keyboardActions = KeyboardActions(
                                 onDone = { focusManager.clearFocus()
                                     Log.d("EditTransactionActivity", "onDone")
-                                    submitTransaction(id.value, amount.value, description.value, date.value, category.value)
+                                    submitTransaction(id, amount, description, date, category)
                                 }
                             )
                         )
                         HorizontalDivider()
                         Button(
                             onClick = {
-                                submitTransaction(id.value, amount.value, description.value, date.value, category.value)
+                                submitTransaction(id, amount, description, date, category)
                             },
                             modifier = Modifier.align(Alignment.End)
                         ) {
@@ -212,7 +231,7 @@ class EditTransactionActivity : ComponentActivity() {
             tag = category
         )
         var action = ""
-        if(id== (-1).toLong()){
+        if(id== (-1).toLong()){ // no id means insert a new transaction
             lifecycleScope.launch {
                 transactionRepository.insertTransaction(transactionEntity)
             }
