@@ -22,4 +22,12 @@ class TransactionFetchViewModel(private val transactionRepository: TransactionRe
             _transactions.value = transactionRepository.getAllTransactions()
         }
     }
+
+    fun setAmountFilter(amount: Double){
+        for (transaction in _transactions.value!!){
+            if (transaction.amount > amount){
+                _transactions.value = _transactions.value!!.filter { it.amount > amount }
+            }
+        }
+    }
 }
