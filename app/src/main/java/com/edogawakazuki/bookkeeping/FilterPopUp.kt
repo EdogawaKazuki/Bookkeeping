@@ -30,7 +30,8 @@ import com.edogawakazuki.bookkeeping.data.viewmodel.TransactionFetchViewModel
 
 @Composable
 fun FilterPopUp(
-    activity: Activity,showFilterPopUp: MutableState<Boolean>,
+    activity: Activity,
+    showFilterPopUp: MutableState<Boolean>,
     transactionFetchViewModel: TransactionFetchViewModel,
 ) {
     // ...

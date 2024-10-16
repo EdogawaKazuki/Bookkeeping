@@ -4,16 +4,14 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -25,13 +23,10 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -43,12 +38,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.edogawakazuki.bookkeeping.data.repository.AppDatabaseProvider
 import com.edogawakazuki.bookkeeping.data.repository.TransactionRepository
 import com.edogawakazuki.bookkeeping.ui.theme.BookkeepingTheme
+import com.edogawakazuki.bookkeeping.utils.Utils
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 
 //Todo: Baidu IME not support the action.next
@@ -65,8 +61,10 @@ class EditTransactionActivity : ComponentActivity() {
         val id = intent.getLongExtra("id", -1)
         var amount = intent.getDoubleExtra("amount", 0.0)
         var description = intent.getStringExtra("description") ?: ""
-        var date = intent.getLongExtra("date", 0)
-        var account = intent.getStringExtra("account") ?: ""
+        var dateTime = intent.getLongExtra("date", System.currentTimeMillis())
+        var calendar = Calendar.getInstance()
+        calendar.timeInMillis = dateTime
+        val account = intent.getLongExtra("account", 0) ?: ""
         var category = intent.getStringExtra("category") ?: ""
 
         setContent {
@@ -95,10 +93,11 @@ class EditTransactionActivity : ComponentActivity() {
                 ) { innerPadding ->
                     var amountTextField = remember { mutableStateOf(TextFieldValue(amount.toString())) }
                     val descriptionTextField = remember { mutableStateOf(TextFieldValue(description)) }
-                    val dateTextField = remember { mutableStateOf(TextFieldValue(date.toString())) }
-                    val accountTextField = remember { mutableStateOf(TextFieldValue(account)) }
+                    val accountTextField = remember { mutableStateOf(TextFieldValue(account.toString())) }
                     val categoryTextField = remember { mutableStateOf(TextFieldValue(category)) }
                     // auto focus switch
+                    val showDatePicker = remember { mutableStateOf(false) }
+                    val showTimePicker = remember { mutableStateOf(false) }
                     val focusManager = LocalFocusManager.current
                     val (focusRequester1, focusRequester2, focusRequester3, focusRequester4) = FocusRequester.createRefs()
 
@@ -156,29 +155,31 @@ class EditTransactionActivity : ComponentActivity() {
                                 imeAction = ImeAction.Next
                             ),
                             keyboardActions = KeyboardActions(
-                                onNext = { focusRequester3.requestFocus() }
+                                onNext = {
+                                    showDatePicker.value = true
+                                    Log.d("EditTransactionActivity", "onNext")
+                                }
                             )
                         )
                         HorizontalDivider()
-                        TextField(
-                            value = dateTextField.value,
-                            onValueChange = {
-                                dateTextField.value = it
-                                date = it.text.toLong()
-                                            },
-                            label = { Text("Date") },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequester3)
-                                .onFocusChanged { focusState ->
-                                    Log.d("Focus", "Amount TextField focused: ${focusState.isFocused}")
-                                },
-                            keyboardOptions = KeyboardOptions(
-                                imeAction = ImeAction.Next
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onNext = { focusRequester4.requestFocus() }
-                            )
+                        DatePickerFieldToModal(
+                            showModel = showDatePicker,
+                            calendar = calendar,
+                            onDateSelected = {
+                                calendar = it
+                                focusRequester4.requestFocus()
+                                dateTime = calendar.timeInMillis
+                            }
+                        )
+                        HorizontalDivider()
+                        TimePickerFieldToModal(
+                            showModel = showTimePicker,
+                            calendar = calendar,
+                            onTimeSelected = {
+                                calendar = it
+                                focusRequester4.requestFocus()
+                                dateTime = calendar.timeInMillis
+                            }
                         )
                         HorizontalDivider()
                         TextField(
@@ -200,14 +201,14 @@ class EditTransactionActivity : ComponentActivity() {
                             keyboardActions = KeyboardActions(
                                 onDone = { focusManager.clearFocus()
                                     Log.d("EditTransactionActivity", "onDone")
-                                    submitTransaction(id, amount, description, date, category)
+                                    submitTransaction(id, amount, description, dateTime, category)
                                 }
                             )
                         )
                         HorizontalDivider()
                         Button(
                             onClick = {
-                                submitTransaction(id, amount, description, date, category)
+                                submitTransaction(id, amount, description, dateTime, category)
                             },
                             modifier = Modifier.align(Alignment.End)
                         ) {
@@ -250,6 +251,7 @@ class EditTransactionActivity : ComponentActivity() {
             putExtra("date", date)
             putExtra("category", category)
         }
+        Toast.makeText(this, "amount: $amount, description: $description, date: $date, category: $category", Toast.LENGTH_SHORT).show()
         setResult(Activity.RESULT_OK, resultIntent)
         finish()
     }
