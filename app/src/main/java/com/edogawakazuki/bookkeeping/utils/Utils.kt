@@ -103,6 +103,11 @@ class Utils {
             }
             return combinedCalendar.timeInMillis
         }
+
+        fun formatCurrency(balance: Double, currency: String): String {
+            //TODO("Not yet implemented")
+            return balance.toString()
+        }
     }
 
 }

@@ -22,13 +22,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModelProvider
+import com.edogawakazuki.bookkeeping.data.repository.AccountRepository
 import com.edogawakazuki.bookkeeping.data.repository.AppDatabaseProvider
 import com.edogawakazuki.bookkeeping.data.repository.TransactionRepository
+import com.edogawakazuki.bookkeeping.data.viewmodel.AccountFetchViewModel
 import com.edogawakazuki.bookkeeping.data.viewmodel.TransactionFetchViewModel
+import com.edogawakazuki.bookkeeping.data.viewmodelFactory.AccountFetchViewModelFactory
 import com.edogawakazuki.bookkeeping.data.viewmodelFactory.TransactionFetchViewModelFactory
 import com.edogawakazuki.bookkeeping.ui.theme.BookkeepingTheme
 
 private lateinit var transactionFetchViewModel: TransactionFetchViewModel
+private lateinit var accountFetchViewModel: AccountFetchViewModel
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -64,6 +68,12 @@ class MainActivity : ComponentActivity() {
                             } ) {
                                 Text("+")
                             }
+                            FloatingActionButton (onClick = {
+                                val intent = Intent(this@MainActivity, EditAccountActivity::class.java)
+                                editAccountLauncher.launch(intent)
+                            } ) {
+                                Text("A")
+                            }
 
                         }
                     },
@@ -83,6 +93,9 @@ class MainActivity : ComponentActivity() {
         val transactionFactory = TransactionFetchViewModelFactory(transactionRepository)
         transactionFetchViewModel = ViewModelProvider(this, transactionFactory)[TransactionFetchViewModel::class.java]
 
+        val accountRepository = AccountRepository(AppDatabaseProvider(this).db.accountDao())
+        val accountFactory = AccountFetchViewModelFactory(accountRepository)
+        accountFetchViewModel = ViewModelProvider(this, accountFactory)[AccountFetchViewModel::class.java]
     }
 
     private val editTransactionLauncher = registerForActivityResult(
@@ -107,6 +120,31 @@ class MainActivity : ComponentActivity() {
             }
             Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show()
             transactionFetchViewModel.loadTransactions()
+        }
+
+    }
+    private val editAccountLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ){
+        result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data: Intent? = result.data
+            val toastMsg: String = when (val action: String? = data?.getStringExtra("action")) {
+                "insert" -> {
+                    "Account added"
+                }
+                "update" -> {
+                    "Account updated"
+                }
+                "delete" -> {
+                    "Account deleted"
+                }
+                else -> {
+                    "Unknown action $action"
+                }
+            }
+            Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show()
+            accountFetchViewModel.loadAccounts()
         }
 
     }
@@ -160,7 +198,13 @@ class MainActivity : ComponentActivity() {
                             editTransactionLauncher.launch(intent)
                         }
                     )
-                    2 -> SettingsContent()
+                    2 -> AccountPage(
+                        this@MainActivity,
+                        accountFetchViewModel,
+                        onItemClick = { intent ->
+                            editTransactionLauncher.launch(intent)
+                        }
+                    )
                 }
             }
         }
